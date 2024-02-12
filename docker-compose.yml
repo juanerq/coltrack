@@ -1,0 +1,59 @@
+version: '3'
+
+services:
+  back-prod:
+    container_name: back-prod
+    env_file: .env
+    build: 
+      target: production
+      context: .
+      args:
+        - PORT=${PORT}
+    ports:
+      - ${PORT}:${PORT}
+  deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "512m"
+        reservations:
+          cpus: "0.25"
+          memory: "256m"
+
+  back-dev:
+    container_name: back-dev
+    restart: unless-stopped
+    env_file: .env
+    build: 
+      target: development
+      context: .
+      args:
+        - PORT=${PORT}
+    ports:
+      - ${PORT}:${PORT}
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules/
+    deploy:
+          resources:
+            limits:
+              cpus: "1"
+              memory: "512m"
+            reservations:
+              cpus: "0.25"
+              memory: "256m"
+
+  db:
+    image: postgres:15.3
+    container_name: shipping-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - ./postgres:/var/lib/postgres/data
+
+volumes:
+  node_modules: 
