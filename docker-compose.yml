@@ -11,14 +11,14 @@ services:
         - PORT=${PORT}
     ports:
       - ${PORT}:${PORT}
-  deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: "512m"
-        reservations:
-          cpus: "0.25"
-          memory: "256m"
+    deploy:
+        resources:
+          limits:
+            cpus: "1"
+            memory: "512m"
+          reservations:
+            cpus: "0.25"
+            memory: "256m"
 
   back-dev:
     container_name: back-dev
@@ -45,7 +45,7 @@ services:
 
   db:
     image: postgres:15.3
-    container_name: shipping-db
+    container_name: db
     restart: always
     ports:
       - "5432:5432"
