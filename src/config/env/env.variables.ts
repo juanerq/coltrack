@@ -1,4 +1,11 @@
-import { IsEmail, IsEnum, IsNumber, IsString, IsUrl } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsNumber,
+  IsNumberString,
+  IsString,
+  IsUrl,
+} from 'class-validator';
 
 enum Environment {
   Development = 'development',
@@ -15,7 +22,7 @@ export class EnvironmentVariables {
   @IsString()
   DB_HOST: string;
 
-  @IsNumber()
+  @IsNumberString()
   DB_PORT: number;
 
   @IsString()
