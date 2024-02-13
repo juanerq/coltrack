@@ -1,8 +1,15 @@
 import { Module } from '@nestjs/common';
-import { RolesModule } from './contexts/roles/roles.module';
+import { ConfigModule } from '@nestjs/config';
+import { validateEnvironment } from './config/env/env.validation';
 
 @Module({
-  imports: [RolesModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      cache: true,
+      validate: validateEnvironment,
+    }),
+  ],
   controllers: [],
   providers: [],
 })
