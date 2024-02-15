@@ -4,7 +4,6 @@ import {
   IsNumber,
   IsNumberString,
   IsString,
-  IsUrl,
 } from 'class-validator';
 
 enum Environment {
@@ -37,15 +36,15 @@ export class EnvironmentVariables {
   @IsString()
   JWT_SECRET: string;
 
-  @IsEnum(['gmail'])
-  MAILER_SERVICE: string;
+  @IsEnum(['smtp.gmail.com'])
+  MAIL_HOST: string;
 
   @IsEmail()
-  MAILER_EMAIL: string;
+  SMTP_EMAIL: string;
 
   @IsString()
-  MAILER_SECRET_KEY: string;
+  SMTP_SECRET_KEY: string;
 
-  @IsUrl()
+  @IsString()
   WEBSERVICE_URL: string;
 }
