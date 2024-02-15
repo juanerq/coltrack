@@ -1,0 +1,18 @@
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <p>👋 ¡Hola <%= name %>!</p>
+  <p>
+    Gracias por registrarte en Coltrack. Estamos muy emocionados de tenerte a bordo. ⚡
+  </p>
+  
+  <p>Para comenzar a utilizar Coltrack, por favor confirma tu cuenta a continuación:</p>
+  <p>
+    <a href="<%= confirmation_url %>">Confirmar tu cuenta 🚀</a>
+  </p>
+  
+  <p>
+    📌 Si tienes problemas al hacer clic en el botón de confirmar cuenta, copia y pega
+    la siguiente URL en tu navegador web.
+  </p>
+  
+  <a href="<%= confirmation_url %>"><%= confirmation_url %></a>
+</div>
