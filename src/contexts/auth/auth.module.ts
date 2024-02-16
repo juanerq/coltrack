@@ -21,7 +21,7 @@ import { TypedEventEmitter } from '../../events/event-emitter/typed-event-emitte
       useFactory: (configService: ConfigService) => ({
         secret: configService.get('JWT_SECRET'),
         signOptions: {
-          expiresIn: '2h',
+          expiresIn: '15m',
         },
       }),
     }),
