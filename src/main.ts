@@ -9,6 +9,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { QueryExceptionFilter } from './common/filters/query-exception.filter';
 import { swaggerConfig } from './config/swagger/swagger.config';
+import fastifyCookie from '@fastify/cookie';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -16,12 +17,17 @@ async function bootstrap() {
     new FastifyAdapter(),
   );
 
+  const configService = app.get(ConfigService);
+
+  await app.register(fastifyCookie as any, {
+    secret: configService.get('COOKIE_SECRET'),
+  });
+
   app.setGlobalPrefix('api');
 
   app.useGlobalFilters(new HttpExceptionFilter(), new QueryExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  const configService = app.get(ConfigService);
   const port = configService.get('PORT');
 
   swaggerConfig(app);
