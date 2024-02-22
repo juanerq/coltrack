@@ -17,6 +17,7 @@ import { RolePermissions } from '../roles/interfaces/permissions.interface';
 import { UpdateUserDto } from './dto';
 import { ConfigService } from '@nestjs/config';
 import { TypedEventEmitter } from '../../events/event-emitter/typed-event-emitter.class';
+import { ILoginResponse } from './interfaces/login-response.interface';
 
 @Injectable()
 export class AuthService {
@@ -108,7 +109,7 @@ export class AuthService {
     return user;
   }
 
-  async login(loginUserDto: LoginUserDto) {
+  async login(loginUserDto: LoginUserDto): Promise<ILoginResponse> {
     const { password, email } = loginUserDto;
 
     const user = await this.userRepository.findOne({
@@ -122,6 +123,9 @@ export class AuthService {
     if (!user)
       throw new UnauthorizedException('Credentials are not valid (email)');
 
+    if (!bcrypt.compareSync(password, user.password))
+      throw new UnauthorizedException('Credentials are not valid (password)');
+
     const roles: RolePermissions[] = [];
 
     if (user.roles) {
@@ -131,9 +135,6 @@ export class AuthService {
       }
     }
 
-    if (!bcrypt.compareSync(password, user.password))
-      throw new UnauthorizedException('Credentials are not valid (password)');
-
     delete user.password;
 
     const payload = {
@@ -141,14 +142,30 @@ export class AuthService {
       roles,
     };
 
+    const accessToken = this.createAccessToken(payload);
+    const refreshToken = this.createRefreshToken(payload);
+
     return {
-      ...user,
-      token: this.getJwtToken(payload),
+      user,
+      token: accessToken,
+      refreshToken,
+    };
+  }
+
+  async refresh(oldRefreshToken: string) {
+    const payload = await this.validateToken(oldRefreshToken);
+
+    const newRefreshToken = this.createRefreshToken(payload);
+    const newAccessToken = this.createAccessToken(payload);
+
+    return {
+      newAccessToken,
+      newRefreshToken,
     };
   }
 
   async validateEmail(token: string) {
-    const payload = await this.validateToken(token);
+    const payload = await this.validateToken<{ email: string }>(token);
 
     if (!payload.email)
       throw new InternalServerErrorException('Email not found in token');
@@ -167,19 +184,24 @@ export class AuthService {
     }
   }
 
-  async validateToken(token: string) {
+  async validateToken<T = JwtPayload>(token: string) {
     try {
-      const payload = this.jwtService.verify(token);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { iat, exp, ...payload } = this.jwtService.verify(token);
       if (!payload) throw new UnauthorizedException('Invalid Token');
 
-      return payload as { email: string };
+      return payload as T;
     } catch (error) {
       throw new UnauthorizedException('Invalid Token');
     }
   }
 
-  private getJwtToken(payload: JwtPayload) {
+  private createAccessToken(payload: JwtPayload) {
     return this.jwtService.sign(payload);
+  }
+
+  private createRefreshToken(payload: JwtPayload) {
+    return this.jwtService.sign(payload, { expiresIn: '2m' });
   }
 
   private getConfirmUrlToken({ email }: { email: string }) {

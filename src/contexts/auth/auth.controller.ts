@@ -8,11 +8,15 @@ import {
   HttpCode,
   Get,
   Query,
+  Res,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiCookieAuth,
   ApiCreatedResponse,
+  ApiInternalServerErrorResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
@@ -26,23 +30,35 @@ import { Auth } from './decorators';
 import { ValidateEmail } from './dto/validate-email.dto';
 import { GenericResponseDto } from 'src/common/dtos/generic-response.dto';
 import { LoginResponse } from './dto/login-response.dto';
+import { FastifyReply } from 'fastify';
+import { Cookies } from 'src/common/decorators/cookies.decorator';
+import { CookiesAuth } from './interfaces/cookies-auth.interface';
 
 @ApiTags('1. Autenticación')
 @ApiBearerAuth()
+@ApiBadRequestResponse({
+  description: 'Propiedades invalidas',
+  type: GenericResponseDto,
+})
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @ApiCreatedResponse({
+  @ApiNoContentResponse({
     description: 'Correo validado',
-    type: ValidateEmail,
+    type: GenericResponseDto,
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Correo no encontrado en token',
+    type: GenericResponseDto,
   })
   @Get('validate-email')
+  @HttpCode(204)
   validateEmail(@Query() { token }: ValidateEmail) {
     return this.authService.validateEmail(token);
   }
 
-  //@Auth({ moduleName: 'user' })
+  @Auth({ moduleName: 'user' })
   @Post('register')
   @ApiCreatedResponse({
     description: 'Usuario creado exitosamente',
@@ -50,10 +66,6 @@ export class AuthController {
   })
   @ApiNotFoundResponse({
     description: 'Roles no encontrados',
-    type: GenericResponseDto,
-  })
-  @ApiBadRequestResponse({
-    description: 'Propiedades invalidas',
     type: GenericResponseDto,
   })
   create(@Body() createUserDto: CreateUserDto) {
@@ -67,12 +79,52 @@ export class AuthController {
     description: 'Credenciales invalidas',
     type: GenericResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'Propiedades invalidas',
+  async loginUser(
+    @Res({ passthrough: true }) res: FastifyReply,
+    @Body() loginUserDto: LoginUserDto,
+  ) {
+    const { token, refreshToken, user } =
+      await this.authService.login(loginUserDto);
+
+    this.setCookie(res, 'refreshToken', refreshToken);
+
+    return {
+      ...user,
+      token,
+    };
+  }
+
+  @Post('refresh')
+  @ApiCookieAuth('refreshToken')
+  @ApiOkResponse({
+    description: 'Refrescar token',
+    schema: {
+      type: 'object',
+      properties: {
+        token: { type: 'string' },
+      },
+      example: {
+        token:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OCwicm9sZXMiOlt7ImlkIjoyLCJuYW1lIjoiVVNFUiIsIm1...',
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Credenciales invalidas',
     type: GenericResponseDto,
   })
-  loginUser(@Body() loginUserDto: LoginUserDto) {
-    return this.authService.login(loginUserDto);
+  async refresh(
+    @Res({ passthrough: true }) res: FastifyReply,
+    @Cookies('refreshToken') refreshToken: string,
+  ) {
+    const { newAccessToken, newRefreshToken } =
+      await this.authService.refresh(refreshToken);
+
+    this.setCookie(res, 'refreshToken', newRefreshToken);
+
+    return {
+      token: newAccessToken,
+    };
   }
 
   @Auth({ moduleName: 'user' })
@@ -85,14 +137,18 @@ export class AuthController {
     description: 'Roles no encontrados | Usuario no encontrado',
     type: GenericResponseDto,
   })
-  @ApiBadRequestResponse({
-    description: 'Propiedades invalidas',
-    type: GenericResponseDto,
-  })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
   ) {
     return this.authService.update(id, updateUserDto);
+  }
+
+  private setCookie(res: FastifyReply, name: keyof CookiesAuth, value: string) {
+    res.setCookie(name, value, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+    });
   }
 }
