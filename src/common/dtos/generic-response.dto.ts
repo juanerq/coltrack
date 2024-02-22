@@ -14,6 +14,7 @@ export class GenericResponseDto<T> {
   error: string | null;
 
   @ApiProperty({
+    type: 'string',
     examples: ['Record with 1 not found', 'Record already exists'],
   })
   message?: string | string[];
